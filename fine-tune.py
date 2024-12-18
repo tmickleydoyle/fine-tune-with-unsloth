@@ -122,7 +122,7 @@ class Inference:
 
 
 if __name__ == "__main__":
-    model_name = "unsloth/Qwen2.5-Coder-7B"
+    model_name = "unsloth/Qwen2.5-Coder-3B"
     model, tokenizer = ModelSetup.initialize_model(model_name)
     model = ModelSetup.add_lora_adapters(model)
 

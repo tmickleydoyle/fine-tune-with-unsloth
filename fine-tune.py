@@ -4,6 +4,17 @@ from unsloth import FastLanguageModel, is_bfloat16_supported
 from datasets import load_dataset
 from transformers import TrainingArguments
 from trl import SFTTrainer
+from google.colab import userdata
+from peft import AutoPeftModelForCausalLM
+from transformers import AutoTokenizer
+
+ORG_NAME = "tmickleydoyle"
+MODEL = "Qwen2.5-Coder-7B"
+MODEL_NAME = f"{ORG_NAME}/{MODEL}"
+SHOULD_SAVE_MODEL = True
+
+HF_TOKEN = userdata.get('HF_TOKEN')
+
 
 class ModelConfig:
     MAX_SEQ_LENGTH = 2048
@@ -66,8 +77,8 @@ class Training:
             per_device_train_batch_size=2,
             gradient_accumulation_steps=4,
             warmup_steps=5,
-            # num_train_epochs=2,
-            max_steps = 60,
+            num_train_epochs=2,
+            # max_steps = 20,
             learning_rate=2e-4,
             fp16 = not is_bfloat16_supported(),
             bf16 = is_bfloat16_supported(),
@@ -103,13 +114,12 @@ class Inference:
         )
 
         FastLanguageModel.for_inference(model)
-
         inputs = tokenizer([
             alpaca_prompt.format(instruction, input_text, "")
         ], return_tensors="pt").to("cuda")
 
         outputs = model.generate(**inputs, use_cache=True)
-        return tokenizer.batch_decode(outputs)
+
 
 if __name__ == "__main__":
     model_name = "unsloth/Qwen2.5-Coder-7B"
@@ -118,6 +128,12 @@ if __name__ == "__main__":
 
     dataset = DataPreparation.prepare_dataset()
     Training.train_model(model, tokenizer, dataset)
+
+    if SHOULD_SAVE_MODEL:
+        model.save_pretrained_merged(model_name, tokenizer, save_method = "merged_16bit",)
+        model.push_to_hub_merged(MODEL_NAME, tokenizer, save_method = "merged_16bit", token = HF_TOKEN)
+        model.save_pretrained_gguf(model_name, tokenizer, quantization_method = "f16")
+        model.push_to_hub_gguf(MODEL_NAME, tokenizer, quantization_method = "f16", token = HF_TOKEN)
 
     results = Inference.run_inference(
         model, tokenizer, "Write a function for a merge interval and show the command I need to run in Python.", ""

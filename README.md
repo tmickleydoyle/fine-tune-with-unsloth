@@ -44,4 +44,4 @@ print(results[0])
 - Ensure CUDA is enabled for better performance.
 - Update `ORG_NAME` and `MODEL` to use your Hugging Face repository.
 
-That's it! You can now fine-tune and use `Qwen2.5-Coder-7B` for your tasks.
+That's it! You can now fine-tune.

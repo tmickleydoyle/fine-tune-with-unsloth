@@ -28,7 +28,6 @@ The fine-tuning process is configured to run for 2 epochs with a batch size of 2
 
 ### 4. Save and Share
 After training:
-- Save the model locally.
 - Optionally push it to the Hugging Face Hub.
 
 ### 5. Run Inference

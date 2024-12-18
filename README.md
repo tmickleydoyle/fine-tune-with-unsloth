@@ -1,6 +1,6 @@
 # Fine-Tuning with Unsloth
 
-This project demonstrates fine-tuning and inference using the `Qwen2.5-Coder-7B` model with the `unsloth` library.
+This project demonstrates fine-tuning and inference using the `Qwen2.5-Coder` model with the `unsloth` library.
 
 ## Setup
 

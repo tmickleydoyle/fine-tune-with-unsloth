@@ -9,7 +9,7 @@ from peft import AutoPeftModelForCausalLM
 from transformers import AutoTokenizer
 
 ORG_NAME = "tmickleydoyle"
-MODEL = "Qwen2.5-Coder-7B"
+MODEL = "Qwen2.5-Coder-7B-Instruct"
 MODEL_NAME = f"{ORG_NAME}/{MODEL}"
 SHOULD_SAVE_MODEL = True
 
@@ -49,26 +49,46 @@ class ModelSetup:
 
 class DataPreparation:
     @staticmethod
-    def prepare_dataset():
+    def prepare_dataset(template_type):
         alpaca_prompt = (
             """Below is an instruction that describes a task, paired with an input that provides further context. "
             "Write a response that appropriately completes the request.\n\n"""
             """### Instruction:\n{}\n\n### Input:\n{}\n\n### Response:\n{}"""
         )
 
+        fim_prompt = "<|fim_prefix|>{} <|fim_middle|>{} <|fim_suffix|>{}"
+
         def formatting_prompts_func(examples):
             instructions = examples["instruction"]
             inputs = examples["input"]
             outputs = examples["output"]
             texts = []
+
             for instruction, input, output in zip(instructions, inputs, outputs):
-                text = alpaca_prompt.format(instruction, input, output) + tokenizer.eos_token
+                total_length = len(output)
+                first_split = total_length // 4
+                middle_split = first_split + total_length // 2
+
+                prefix = output[:first_split]
+                middle = output[first_split:middle_split]
+                suffix = output[middle_split:]
+
+                if template_type == "alpaca":
+                    text = alpaca_prompt.format(instruction, input, output) + tokenizer.eos_token
+                elif template_type == "fim":
+                    fim_text = fim_prompt.format(prefix, middle, suffix)
+                    text = alpaca_prompt.format(instruction, input, fim_text) + tokenizer.eos_token
+                else:
+                    raise ValueError("Invalid template_type. Choose either 'alpaca' or 'fim'.")
+
                 texts.append(text)
+
             return {"text": texts}
 
         dataset = load_dataset("iamtarun/python_code_instructions_18k_alpaca", split="train")
         dataset = dataset.map(formatting_prompts_func, batched=True)
         return dataset
+
 
 class Training:
     @staticmethod
@@ -122,11 +142,11 @@ class Inference:
 
 
 if __name__ == "__main__":
-    model_name = "unsloth/Qwen2.5-Coder-3B"
+    model_name = "unsloth/Qwen2.5-Coder-7B-Instruct"
     model, tokenizer = ModelSetup.initialize_model(model_name)
     model = ModelSetup.add_lora_adapters(model)
 
-    dataset = DataPreparation.prepare_dataset()
+    dataset = DataPreparation.prepare_dataset('fim')
     Training.train_model(model, tokenizer, dataset)
 
     if SHOULD_SAVE_MODEL:
